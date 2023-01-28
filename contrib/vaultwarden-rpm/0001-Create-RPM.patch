@@ -1,0 +1,130 @@
+From 5f8cb581063da3bdcc918956da664c33d8966377 Mon Sep 17 00:00:00 2001
+From: Alex Corcoles <alex@molly.ipa.pdp7.net>
+Date: Sat, 16 Jul 2022 23:53:42 +0200
+Subject: [PATCH] Create RPM
+
+---
+ .rpm/bitwarden_rs.service | 14 ++++++++++
+ .rpm/bitwarden_rs.spec    | 54 +++++++++++++++++++++++++++++++++++++++
+ Cargo.toml                | 14 ++++++++--
+ 3 files changed, 80 insertions(+), 2 deletions(-)
+ create mode 100644 .rpm/bitwarden_rs.service
+ create mode 100644 .rpm/bitwarden_rs.spec
+
+diff --git a/.rpm/bitwarden_rs.service b/.rpm/bitwarden_rs.service
+new file mode 100644
+index 0000000..3085453
+--- /dev/null
++++ b/.rpm/bitwarden_rs.service
+@@ -0,0 +1,14 @@
++[Unit]
++Description=bitwarden_rs
++After=network.target
++
++[Service]
++ExecStart=/usr/bin/bitwarden_rs
++Environment=WEB_VAULT_ENABLED=false
++Environment=DATA_FOLDER=/var/lib/bitwarden_rs
++Environment=ROCKET_ADDRESS=0.0.0.0
++User=bitwarden_rs
++Group=bitwarden_rs
++
++[Install]
++WantedBy=multi-user.target
+diff --git a/.rpm/bitwarden_rs.spec b/.rpm/bitwarden_rs.spec
+new file mode 100644
+index 0000000..6af18a0
+--- /dev/null
++++ b/.rpm/bitwarden_rs.spec
+@@ -0,0 +1,54 @@
++%define __spec_install_post %{nil}
++%define __os_install_post %{_dbpath}/brp-compress
++%define debug_package %{nil}
++
++Name: bitwarden_rs
++Summary: foo
++Version: @@VERSION@@
++Release: @@RELEASE@@
++License: GPLv3
++Group: Applications/System
++Source0: %{name}-%{version}.tar.gz
++
++BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
++BuildRequires: systemd
++
++Requires(pre): shadow-utils
++Requires(post): systemd
++Requires(preun): systemd
++Requires(postun): systemd
++
++%description
++%{summary}
++
++%prep
++%setup -q
++
++%install
++rm -rf %{buildroot}
++mkdir -p %{buildroot}
++cp -a * %{buildroot}
++mkdir -p %{buildroot}%{_localstatedir}/lib/bitwarden_rs/
++
++%clean
++rm -rf %{buildroot}
++
++%systemd_post bitwarden_rs.service
++
++%preun
++%systemd_preun bitwarden_rs.service
++
++%postun
++%systemd_postun_with_restart bitwarden_rs.service
++
++%files
++%defattr(-,root,root,-)
++%{_bindir}/*
++%{_unitdir}/bitwarden_rs.service
++%attr(0755,bitwarden_rs,root) %dir %{_localstatedir}/lib/bitwarden_rs
++
++%pre
++getent group bitwarden_rs >/dev/null || groupadd -r bitwarden_rs
++getent passwd bitwarden_rs >/dev/null || \
++    useradd -r -g bitwarden_rs -d / -s /sbin/nologin bitwarden_rs
++exit 0
+diff --git a/Cargo.toml b/Cargo.toml
+index 4f4e4f0..5fc6d38 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+-name = "vaultwarden"
+-version = "1.0.0"
++name = "bitwarden_rs"
++version = "---version---"
+ authors = ["Daniel García <dani-garcia@users.noreply.github.com>"]
+ edition = "2021"
+ rust-version = "1.60.0"
+@@ -11,6 +11,7 @@ readme = "README.md"
+ license = "GPL-3.0-only"
+ publish = false
+ build = "build.rs"
++description = "foo"
+ 
+ [features]
+ # default = ["sqlite"]
+@@ -163,3 +164,12 @@ multer = { git = "https://github.com/BlackDex/multer-rs", rev = "477d16b7fa0f361
+ [profile.release]
+ strip = "debuginfo"
+ lto = "thin"
++
++[package.metadata.rpm.cargo]
++buildflags = ["--release", "--features=sqlite"]
++
++[package.metadata.rpm.targets]
++bitwarden_rs = { path = "/usr/bin/bitwarden_rs" }
++
++[package.metadata.rpm.files]
++"bitwarden_rs.service" = { path = "/usr/lib/systemd/system/bitwarden_rs.service" }
+-- 
+2.31.1
+

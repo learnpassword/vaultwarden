@@ -1,0 +1,14 @@
+[Unit]
+Description=vaultwarden
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/vaultwarden
+Environment=WEB_VAULT_ENABLED=false
+Environment=DATA_FOLDER=/var/lib/vaultwarden
+Environment=ROCKET_ADDRESS=0.0.0.0
+User=vaultwarden
+Group=vaultwarden
+
+[Install]
+WantedBy=multi-user.target
